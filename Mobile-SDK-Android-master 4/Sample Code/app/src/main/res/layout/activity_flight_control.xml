@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:orientation="vertical"
+    android:padding="16dp"
+    tools:context=".demo.flightcontroller.FlightControlActivity2">
+
+    <TextView
+        android:id="@+id/command_text_view"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_marginBottom="16dp"
+        android:text="Command Log"
+        android:textSize="18sp"/>
+
+    <SurfaceView
+        android:id="@+id/video_surface"
+        android:layout_width="200dp"
+        android:layout_height="200dp"
+        android:layout_below="@id/command_text_view"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="16dp"/>
+
+    <Button
+        android:id="@+id/button_takeoff"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Take Off"
+        android:layout_below="@id/video_surface"
+        android:layout_marginTop="16dp"/>
+
+    <Button
+        android:id="@+id/button_land"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Land"
+        android:layout_below="@id/button_takeoff"
+        android:layout_marginTop="16dp"/>
+
+    <Button
+        android:id="@+id/button_enable_joystick"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Enable Joystick"
+        android:layout_below="@id/button_land"
+        android:layout_marginTop="16dp"/>
+
+    <Button
+        android:id="@+id/button_disable_joystick"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Disable Joystick"
+        android:layout_below="@id/button_enable_joystick"
+        android:layout_marginTop="16dp"/>
+
+    <com.dji.sdk.sample.internal.utils.OnScreenJoystick
+        android:id="@+id/joystick_left"
+        android:layout_width="150dp"
+        android:layout_height="150dp"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentStart="true"
+        android:layout_margin="16dp"/>
+
+    <com.dji.sdk.sample.internal.utils.OnScreenJoystick
+        android:id="@+id/joystick_right"
+        android:layout_width="150dp"
+        android:layout_height="150dp"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentEnd="true"
+        android:layout_margin="16dp"/>
+
+</RelativeLayout>
