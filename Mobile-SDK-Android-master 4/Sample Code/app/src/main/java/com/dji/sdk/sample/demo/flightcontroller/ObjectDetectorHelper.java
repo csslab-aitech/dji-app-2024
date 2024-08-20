@@ -1,20 +1,12 @@
 package com.dji.sdk.sample.demo.flightcontroller;
 
-import static dji.midware.data.manager.P3.ServiceManager.getContext;
-
 import android.content.Context;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.ImageFormat;
 import android.graphics.RectF;
-import android.graphics.YuvImage;
-import android.graphics.Rect;
-import android.util.Log;
-
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 import android.widget.Toast;
-
 
 import org.tensorflow.lite.DataType;
 import org.tensorflow.lite.support.image.TensorImage;
@@ -23,17 +15,17 @@ import org.tensorflow.lite.task.vision.detector.Detection;
 import org.tensorflow.lite.task.vision.detector.ObjectDetector;
 import org.tensorflow.lite.task.vision.detector.ObjectDetector.ObjectDetectorOptions;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class ObjectDetectorHelper {
     private static final String TAG = "ObjectDetectorHelper";
     private ObjectDetector objectDetector;
     private Context context;
     private DetectionResultsListener detectionResultsListener;
-    private Handler handler = new Handler(Looper.getMainLooper());  // メインスレッドのHandlerを取得
+    private Handler handler = new Handler(Looper.getMainLooper());
+    private ExecutorService executorService = Executors.newSingleThreadExecutor();
 
     public interface DetectionResultsListener {
         void onDetectionResults(Bitmap bitmap);
@@ -60,58 +52,42 @@ public class ObjectDetectorHelper {
         }
     }
 
-    public void detect(byte[] videoBuffer, int width, int height, DetectionResultsListener listener) {
-        showToast("Detecting objects in video buffer.");
-        Log.d(TAG, "Detecting objects in video buffer of size: " + videoBuffer.length);
-        Bitmap bitmap = convertNV21ToBitmap(videoBuffer, width, height);
-        if (bitmap != null) {
-            detect(bitmap, listener);
+    public void detect(Bitmap bitmap, DetectionResultsListener listener) {
+        if (bitmap == null) {
+            Log.e(TAG, "Bitmap is null, skipping detection.");
+            return;
         }
-    }
 
-    private void detect(Bitmap bitmap, DetectionResultsListener listener) {
-        showToast("Starting inference");
-        Log.d(TAG, "Converting Bitmap to TensorImage");
+        Log.d(TAG, "Starting inference");
         TensorImage tensorImage = new TensorImage(DataType.UINT8);
         tensorImage.load(bitmap);
 
-        long startTime = System.currentTimeMillis();
-        List<Detection> results = objectDetector.detect(tensorImage);
-        long endTime = System.currentTimeMillis();
-        Log.d(TAG, "Inference time: " + (endTime - startTime) + " ms");
+        executorService.submit(() -> {
+            try {
+                long startTime = System.currentTimeMillis();
+                List<Detection> results = objectDetector.detect(tensorImage);
+                long endTime = System.currentTimeMillis();
+                Log.d(TAG, "Inference time: " + (endTime - startTime) + " ms");
 
-        Bitmap outputBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true);
-        for (Detection result : results) {
-            RectF boundingBox = result.getBoundingBox();
-            // Draw bounding boxes on the bitmap (implementation not shown here)
-        }
+                Bitmap outputBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true); // 必要に応じてコピー
+                for (Detection result : results) {
+                    RectF boundingBox = result.getBoundingBox();
+                    // 必要に応じてバウンディングボックスを描画します
+                }
 
-        if (listener != null) {
-            listener.onDetectionResults(outputBitmap);
-        }
+                handler.post(() -> {
+                    if (listener != null) {
+                        listener.onDetectionResults(outputBitmap);
+                    }
+                });
+            } catch (Exception e) {
+                Log.e(TAG, "Error during object detection: ", e);
+                showToast("Error during object detection: " + e.getMessage());
+            }
+        });
     }
-
-    private Bitmap convertNV21ToBitmap(byte[] nv21Data, int width, int height) {
-        try {
-            // NV21のYUVデータをJPEGに圧縮
-            YuvImage yuvImage = new YuvImage(nv21Data, ImageFormat.NV21, width, height, null);
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            yuvImage.compressToJpeg(new Rect(0, 0, width, height), 100, baos); // 圧縮率を100に設定
-            byte[] jpegArray = baos.toByteArray();
-
-            // JPEGデータからBitmapを生成
-            Bitmap bitmap = BitmapFactory.decodeByteArray(jpegArray, 0, jpegArray.length);
-            Log.d(TAG, "Converted NV21 data to Bitmap");
-            return bitmap;
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to convert NV21 to Bitmap", e);
-            return null;
-        }
-    }
-
 
     private void showToast(final String message) {
-        new Handler(Looper.getMainLooper()).post(() -> Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show());
+        handler.post(() -> Toast.makeText(context, message, Toast.LENGTH_SHORT).show());  // contextを直接使用
     }
-
 }
