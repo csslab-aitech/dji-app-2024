@@ -19,12 +19,17 @@ import com.dji.sdk.sample.R;
 import com.dji.sdk.sample.internal.controller.MainActivity;
 import com.dji.sdk.sample.internal.view.PresentableView;
 
+import org.tensorflow.lite.task.vision.detector.Detection;
+
+import java.util.List;
+
 import dji.sdk.codec.DJICodecManager;
 import dji.sdk.camera.VideoFeeder;
 
 public class VirtualStickView extends LinearLayout implements PresentableView, TextureView.SurfaceTextureListener {
     private TextureView videoSurface;
     private ImageView bitmapImage;
+    private OverlayView overlayView; // 追加: OverlayView の参照
     private DJICodecManager codecManager;
     private VideoFeeder.VideoDataListener videoDataListener;
     private static final String TAG = "VirtualStickView";
@@ -42,6 +47,7 @@ public class VirtualStickView extends LinearLayout implements PresentableView, T
 
         videoSurface = findViewById(R.id.video_surface);
         bitmapImage = findViewById(R.id.bitmap_image);
+        overlayView = findViewById(R.id.overlay_view); // 追加: OverlayView の初期化
 
         videoSurface.setSurfaceTextureListener(this);
 
@@ -107,14 +113,15 @@ public class VirtualStickView extends LinearLayout implements PresentableView, T
         }
     }
 
-    private void onDetectionResults(Bitmap bitmap) {
-        if (bitmap != null) {
-            Log.d(TAG, "Setting bitmap to ImageView.");
-            bitmapImage.setImageBitmap(bitmap);
+    private void onDetectionResults(List<Detection> results) {
+        if (results != null) {
+            Log.d(TAG, "Detection results received. Updating overlay.");
+            overlayView.setResults(results); // OverlayView に検出結果を渡す
         } else {
-            Log.e(TAG, "onDetectionResults: Received null bitmap.");
+            Log.e(TAG, "onDetectionResults: Received null detection results.");
         }
     }
+
 
     private void handleError(Exception e) {
         Log.e(TAG, "handleError: " + e.getMessage(), e);

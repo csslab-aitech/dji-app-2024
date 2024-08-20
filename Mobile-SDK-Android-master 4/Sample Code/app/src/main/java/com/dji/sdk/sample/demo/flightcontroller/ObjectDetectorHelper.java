@@ -2,6 +2,9 @@ package com.dji.sdk.sample.demo.flightcontroller;
 
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
 import android.graphics.RectF;
 import android.os.Handler;
 import android.os.Looper;
@@ -28,7 +31,7 @@ public class ObjectDetectorHelper {
     private ExecutorService executorService = Executors.newSingleThreadExecutor();
 
     public interface DetectionResultsListener {
-        void onDetectionResults(Bitmap bitmap);
+        void onDetectionResults(List<Detection> results);
     }
 
     public ObjectDetectorHelper(Context context, DetectionResultsListener detectionResultsListener) {
@@ -69,15 +72,10 @@ public class ObjectDetectorHelper {
                 long endTime = System.currentTimeMillis();
                 Log.d(TAG, "Inference time: " + (endTime - startTime) + " ms");
 
-                Bitmap outputBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true); // 必要に応じてコピー
-                for (Detection result : results) {
-                    RectF boundingBox = result.getBoundingBox();
-                    // 必要に応じてバウンディングボックスを描画します
-                }
-
+                // 結果をリスナーに通知
                 handler.post(() -> {
                     if (listener != null) {
-                        listener.onDetectionResults(outputBitmap);
+                        listener.onDetectionResults(results); // List<Detection> をリスナーに渡す
                     }
                 });
             } catch (Exception e) {
@@ -86,6 +84,9 @@ public class ObjectDetectorHelper {
             }
         });
     }
+
+
+
 
     private void showToast(final String message) {
         handler.post(() -> Toast.makeText(context, message, Toast.LENGTH_SHORT).show());  // contextを直接使用
