@@ -257,4 +257,4 @@ public class VirtualStickView extends LinearLayout implements PresentableView, T
 }
 
 
-//よっ！！！！！
+//テスト
