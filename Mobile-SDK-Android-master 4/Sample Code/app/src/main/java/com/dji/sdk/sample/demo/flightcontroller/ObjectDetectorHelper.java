@@ -43,7 +43,7 @@ public class ObjectDetectorHelper {
     private void setupObjectDetector() {
         try {
             ObjectDetectorOptions options = ObjectDetectorOptions.builder()
-                    .setMaxResults(3)
+                    .setMaxResults(1)
                     .setScoreThreshold(0.5f)
                     .setBaseOptions(BaseOptions.builder().setNumThreads(2).build())
                     .build();

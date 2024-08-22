@@ -3,6 +3,7 @@ package com.dji.sdk.sample.demo.flightcontroller;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
 import android.os.Handler;
 import android.os.Looper;
@@ -268,7 +269,14 @@ public class VirtualStickView extends LinearLayout implements PresentableView, T
     public String getHint() {
         return "VirtualStickView";
     }
-
+    private RectF detectBoundingBox() {
+        List<Detection> latestDetections = overlayView.getResults();
+        if (latestDetections != null && !latestDetections.isEmpty()) {
+            Detection firstDetection = latestDetections.get(0);  // 最初の検出結果を取得
+            return firstDetection.getBoundingBox();  // バウンディングボックスを返す
+        }
+        return null;  // 検出されなかった場合
+    }
 
 }
 
