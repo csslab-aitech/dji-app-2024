@@ -23,6 +23,7 @@ import com.dji.sdk.sample.internal.view.PresentableView;
 
 import org.tensorflow.lite.task.vision.detector.Detection;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import dji.common.flightcontroller.virtualstick.FlightControlData;
@@ -132,15 +133,28 @@ public class VirtualStickView extends LinearLayout implements PresentableView, T
             Log.e(TAG, "getBitmap returned null in onSurfaceTextureUpdated.");
         }
     }
-
     private void onDetectionResults(List<Detection> results) {
         if (results != null) {
-            Log.d(TAG, "Detection results received. Updating overlay.");
-            overlayView.setResults(results);
+            // 人だけをフィルタリング
+            List<Detection> personDetections = new ArrayList<>();
+            for (Detection detection : results) {
+                String label = detection.getCategories().get(0).getLabel();
+                if ("person".equals(label)) {  // "person" ラベルを持つ検出結果をフィルタリング
+                    personDetections.add(detection);
+                }
+            }
+
+            if (!personDetections.isEmpty()) {
+                Log.d(TAG, "Person detection results received. Updating overlay.");
+                overlayView.setResults(personDetections);
+            } else {
+                Log.d(TAG, "No person detected.");
+            }
         } else {
             Log.e(TAG, "onDetectionResults: Received null detection results.");
         }
     }
+
 
     private void handleError(Exception e) {
         Log.e(TAG, "handleError: " + e.getMessage(), e);
@@ -254,6 +268,8 @@ public class VirtualStickView extends LinearLayout implements PresentableView, T
     public String getHint() {
         return "VirtualStickView";
     }
+
+
 }
 
 
