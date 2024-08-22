@@ -1,17 +1,47 @@
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical">
+    android:layout_height="match_parent">
 
-    <SurfaceView
+    <TextureView
         android:id="@+id/video_surface"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1" />
+        android:layout_width="300dp"
+        android:layout_height="300dp" />
+
+    <com.dji.sdk.sample.demo.flightcontroller.OverlayView
+        android:id="@+id/overlay_view"
+        android:layout_width="300dp"
+        android:layout_height="300dp" />
 
     <ImageView
         android:id="@+id/bitmap_image"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1" />
-</LinearLayout>
+        android:layout_width="300dp"
+        android:layout_height="300dp"
+        android:visibility="gone" />
+
+
+    <Button
+        android:id="@+id/button_forward"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Forward"
+        android:layout_marginTop="10dp"/>
+
+
+    <Button
+        android:id="@+id/button_enable_virtual_stick"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Enable Virtual Stick"
+        android:layout_marginTop="90dp"
+
+        />
+
+    <Button
+        android:id="@+id/button_takeoff_land"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Takeoff/Land"
+        android:layout_marginTop="50dp"/>
+
+</FrameLayout>

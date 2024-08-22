@@ -1,3 +1,4 @@
+
 package com.dji.sdk.sample.demo.flightcontroller;
 
 import android.content.Context;
@@ -14,7 +15,8 @@ import java.util.List;
 
 public class OverlayView extends View {
     private List<Detection> results;
-    private Paint paint;
+    private Paint boxPaint;
+    private Paint textPaint;
 
     public OverlayView(Context context) {
         super(context);
@@ -32,15 +34,20 @@ public class OverlayView extends View {
     }
 
     private void init() {
-        paint = new Paint();
-        paint.setColor(Color.RED);
-        paint.setStyle(Paint.Style.STROKE);
-        paint.setStrokeWidth(5.0f);
+        boxPaint = new Paint();
+        boxPaint.setColor(Color.RED);
+        boxPaint.setStyle(Paint.Style.STROKE);
+        boxPaint.setStrokeWidth(5.0f);
+
+        textPaint = new Paint();
+        textPaint.setColor(Color.RED);
+        textPaint.setTextSize(40);
+        textPaint.setStyle(Paint.Style.FILL);
     }
 
     public void setResults(List<Detection> results) {
         this.results = results;
-        postInvalidate();
+        postInvalidate(); // 画面の再描画を指示
     }
 
     @Override
@@ -48,8 +55,16 @@ public class OverlayView extends View {
         super.onDraw(canvas);
         if (results != null) {
             for (Detection result : results) {
+                // バウンディングボックスを描画
                 RectF boundingBox = result.getBoundingBox();
-                canvas.drawRect(boundingBox, paint);
+                canvas.drawRect(boundingBox, boxPaint);
+
+                // クラス名と信頼度を描画
+                String label = result.getCategories().get(0).getLabel();  // クラス名を取得
+                float confidence = result.getCategories().get(0).getScore();  // 信頼度を取得
+
+                String text = label + " " + String.format("%.2f", confidence * 100) + "%";
+                canvas.drawText(text, boundingBox.left, boundingBox.top - 10, textPaint);  // バウンディングボックスの上に描写
             }
         }
     }
