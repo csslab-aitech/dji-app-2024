@@ -28,9 +28,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 import dji.common.flightcontroller.virtualstick.FlightControlData;
+import dji.common.gimbal.Rotation;
+import dji.common.gimbal.RotationMode;
+import dji.sdk.base.BaseProduct;
 import dji.sdk.codec.DJICodecManager;
 import dji.sdk.camera.VideoFeeder;
 import dji.sdk.flightcontroller.FlightController;
+import dji.sdk.gimbal.Gimbal;
 import dji.sdk.products.Aircraft;
 import dji.sdk.sdkmanager.DJISDKManager;
 
@@ -45,6 +49,8 @@ public class VirtualStickView extends LinearLayout implements PresentableView, T
     private Button buttonEnableVirtualStick;
     private Button buttonTakeoffLand;
     private FlightController flightController;
+    private Gimbal gimbal;
+
 
     private static final String TAG = "VirtualStickView";
 
@@ -54,7 +60,25 @@ public class VirtualStickView extends LinearLayout implements PresentableView, T
     public VirtualStickView(Context context) {
         super(context);
         init(context);
+        initGimbal();
     }
+
+    private void initGimbal() {
+        BaseProduct product = DJISDKManager.getInstance().getProduct();
+        if (product != null && product instanceof Aircraft) {
+            Aircraft aircraft = (Aircraft) product;
+            if (aircraft.getGimbal() != null) {
+                gimbal = aircraft.getGimbal();
+                Log.d(TAG, "Gimbal initialized successfully.");
+            } else {
+                Log.e(TAG, "Gimbal is not available.");
+            }
+        } else {
+            Log.e(TAG, "Product is not an aircraft or is null.");
+        }
+    }
+
+
 
     private void init(Context context) {
         LayoutInflater layoutInflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
@@ -134,13 +158,79 @@ public class VirtualStickView extends LinearLayout implements PresentableView, T
             Log.e(TAG, "getBitmap returned null in onSurfaceTextureUpdated.");
         }
     }
+    private void adjustGimbalToCenterObject(Detection detection) {
+        // カメラビューの中心座標を計算
+        int cameraCenterX = videoSurface.getWidth() / 2;
+        int cameraCenterY = videoSurface.getHeight() / 2;
+
+        // 検出された物体のバウンディングボックスを取得
+        RectF boundingBox = detection.getBoundingBox();
+
+        // 検出された物体の中心座標を計算
+        float objectCenterX = boundingBox.centerX();
+        float objectCenterY = boundingBox.centerY();
+
+        // カメラ中心と物体中心の差を計算
+        float deltaX = objectCenterX - cameraCenterX;
+        float deltaY = objectCenterY - cameraCenterY;
+
+        Log.d(TAG, "DeltaX: " + deltaX + ", DeltaY: " + deltaY);
+
+        // 差に基づいてジンバルを調整
+        adjustGimbalPitchAndYaw(deltaX, deltaY);
+    }
+
+    private void adjustGimbalPitchAndYaw(float deltaX, float deltaY) {
+        // Check if the gimbal is initialized
+        if (gimbal == null) {
+            Log.e(TAG, "Gimbal is not initialized.");
+            return;
+        }
+
+        // Set a threshold to prevent jitter from small offsets
+        float threshold = 20.0f; // In pixels
+
+        if (Math.abs(deltaX) > threshold || Math.abs(deltaY) > threshold) {
+            float yawAdjustment = 0.0f;   // Adjustment for left/right direction
+            float pitchAdjustment = 0.0f; // Adjustment for up/down direction
+
+            // Adjust gimbal yaw (left/right) based on deltaX
+            if (Math.abs(deltaX) > threshold) {
+                yawAdjustment = deltaX > 0 ? 5.0f : -5.0f; // Right is positive, left is negative
+            }
+
+            // Adjust gimbal pitch (up/down) based on deltaY
+            if (Math.abs(deltaY) > threshold) {
+                // Invert pitch adjustment: If deltaY > 0, move up (negative pitch)
+                pitchAdjustment = deltaY > 0 ? -5.0f : 5.0f; // Up is negative, down is positive
+            }
+
+            // Send command to adjust the drone's gimbal
+            Rotation.Builder rotationBuilder = new Rotation.Builder()
+                    .mode(RotationMode.SPEED)
+                    .pitch(pitchAdjustment)
+                    .yaw(yawAdjustment)
+                    .roll(0);
+
+            gimbal.rotate(rotationBuilder.build(), djiError -> {
+                if (djiError != null) {
+                    Log.e(TAG, "Gimbal adjustment error: " + djiError.getDescription());
+                } else {
+                    Log.d(TAG, "Gimbal adjusted successfully to center the object.");
+                }
+            });
+        }
+    }
+
+
+
     private void onDetectionResults(List<Detection> results) {
         if (results != null) {
-            // 人だけをフィルタリング
+            // "person"というラベルの検出をフィルタリング
             List<Detection> personDetections = new ArrayList<>();
             for (Detection detection : results) {
                 String label = detection.getCategories().get(0).getLabel();
-                if ("person".equals(label)) {  // "person" ラベルを持つ検出結果をフィルタリング
+                if ("person".equals(label)) {
                     personDetections.add(detection);
                 }
             }
@@ -148,6 +238,10 @@ public class VirtualStickView extends LinearLayout implements PresentableView, T
             if (!personDetections.isEmpty()) {
                 Log.d(TAG, "Person detection results received. Updating overlay.");
                 overlayView.setResults(personDetections);
+
+                // 最初の検出結果（例として）を取得してジンバルを調整
+                Detection firstPerson = personDetections.get(0);
+                adjustGimbalToCenterObject(firstPerson);
             } else {
                 Log.d(TAG, "No person detected.");
             }
@@ -269,16 +363,15 @@ public class VirtualStickView extends LinearLayout implements PresentableView, T
     public String getHint() {
         return "VirtualStickView";
     }
-    private RectF detectBoundingBox() {
-        List<Detection> latestDetections = overlayView.getResults();
-        if (latestDetections != null && !latestDetections.isEmpty()) {
-            Detection firstDetection = latestDetections.get(0);  // 最初の検出結果を取得
-            return firstDetection.getBoundingBox();  // バウンディングボックスを返す
-        }
-        return null;  // 検出されなかった場合
-    }
+//    private RectF detectBoundingBox() {
+//        List<Detection> latestDetections = overlayView.getResults();
+//        if (latestDetections != null && !latestDetections.isEmpty()) {
+//            Detection firstDetection = latestDetections.get(0);  // 最初の検出結果を取得
+//            return firstDetection.getBoundingBox();  // バウンディングボックスを返す
+//        }
+//        return null;  // 検出されなかった場合
+//    }
 
 }
 
 
-//テスト

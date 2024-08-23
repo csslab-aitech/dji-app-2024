@@ -48,7 +48,7 @@ public class ObjectDetectorHelper {
                     .setBaseOptions(BaseOptions.builder().setNumThreads(2).build())
                     .build();
 
-            objectDetector = ObjectDetector.createFromFileAndOptions(context, "mobilenetv1.tflite", options);
+            objectDetector = ObjectDetector.createFromFileAndOptions(context, "efficientdet-lite0.tflite", options);
             Log.d(TAG, "Object detector was successfully created.");
         } catch (Exception e) {
             Log.e(TAG, "Failed to create object detector.", e);
