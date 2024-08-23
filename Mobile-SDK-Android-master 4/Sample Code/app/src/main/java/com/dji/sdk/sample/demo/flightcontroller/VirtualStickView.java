@@ -50,7 +50,8 @@ public class VirtualStickView extends LinearLayout implements PresentableView, T
     private Button buttonTakeoffLand;
     private FlightController flightController;
     private Gimbal gimbal;
-
+    private static final int DETECTION_INTERVAL = 5; // 5フレームごとに検出処理を実行
+    private int frameCount = 0;
 
     private static final String TAG = "VirtualStickView";
 
@@ -146,16 +147,16 @@ public class VirtualStickView extends LinearLayout implements PresentableView, T
         }
         return false;
     }
-
     @Override
     public void onSurfaceTextureUpdated(SurfaceTexture surface) {
-        Log.d(TAG, "onSurfaceTextureUpdated: SurfaceTexture updated.");
-        Bitmap bitmap = videoSurface.getBitmap();
-        if (bitmap != null) {
-            Log.d(TAG, "Captured bitmap from TextureView. Width: " + bitmap.getWidth() + ", Height: " + bitmap.getHeight());
-            objectDetectorHelper.detect(bitmap, this::onDetectionResults);
-        } else {
-            Log.e(TAG, "getBitmap returned null in onSurfaceTextureUpdated.");
+        frameCount++;
+        if (frameCount % DETECTION_INTERVAL == 0) {
+            Bitmap bitmap = videoSurface.getBitmap();
+            if (bitmap != null) {
+                objectDetectorHelper.detect(bitmap, this::onDetectionResults);
+            } else {
+                Log.e(TAG, "getBitmap returned null in onSurfaceTextureUpdated.");
+            }
         }
     }
     private void adjustGimbalToCenterObject(Detection detection) {
@@ -196,13 +197,13 @@ public class VirtualStickView extends LinearLayout implements PresentableView, T
 
             // Adjust gimbal yaw (left/right) based on deltaX
             if (Math.abs(deltaX) > threshold) {
-                yawAdjustment = deltaX > 0 ? 5.0f : -5.0f; // Right is positive, left is negative
+                yawAdjustment = deltaX > 0 ? 10.0f : -10.0f; // Right is positive, left is negative
             }
 
             // Adjust gimbal pitch (up/down) based on deltaY
             if (Math.abs(deltaY) > threshold) {
                 // Invert pitch adjustment: If deltaY > 0, move up (negative pitch)
-                pitchAdjustment = deltaY > 0 ? -5.0f : 5.0f; // Up is negative, down is positive
+                pitchAdjustment = deltaY > 0 ? -10.0f : 10.0f; // Up is negative, down is positive
             }
 
             // Send command to adjust the drone's gimbal
