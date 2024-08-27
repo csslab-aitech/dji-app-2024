@@ -22,16 +22,7 @@
         android:visibility="gone"
         android:layout_gravity="center" />
 
-    <!-- 追跡開始ボタン -->
-<!--    <Button-->
-<!--        android:id="@+id/button_track_object"-->
-<!--        android:layout_width="wrap_content"-->
-<!--        android:layout_height="wrap_content"-->
-<!--        android:text="Track Object"-->
-<!--        android:layout_marginTop="200dp"-->
-<!--        />-->
 
-    <!-- 既存のボタン -->
     <Button
         android:id="@+id/button_forward"
         android:layout_width="wrap_content"
@@ -53,4 +44,34 @@
         android:text="Takeoff/Land"
         android:layout_marginTop="50dp"/>
 
+    <!-- 例として追加 -->
+    <TextView
+        android:id="@+id/text_distance"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Distance: 0.0m"
+        android:textSize="16sp"
+        android:layout_marginTop="130dp"
+        android:textColor="#FF0000"/>
+
+
+
+    <TextView
+        android:id="@+id/text_angle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Angle: 0.0"
+        android:textSize="16sp"
+        android:layout_marginTop="160dp"
+        android:textColor="#FF0000"/>
+
+
+    <TextView
+        android:id="@+id/text_direction"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Direction: 0.0"
+        android:textSize="16sp"
+        android:layout_marginTop="190dp"
+        android:textColor="#FF0000"/>
 </FrameLayout>

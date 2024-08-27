@@ -13,6 +13,7 @@ import android.view.TextureView;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -52,6 +53,9 @@ public class VirtualStickView extends LinearLayout implements PresentableView, T
     private Gimbal gimbal;
     private static final int DETECTION_INTERVAL = 5; // 5フレームごとに検出処理を実行
     private int frameCount = 0;
+    private TextView textDistance;
+    private TextView textAngle;
+    private TextView textDirection;
 
     private static final String TAG = "VirtualStickView";
 
@@ -88,6 +92,12 @@ public class VirtualStickView extends LinearLayout implements PresentableView, T
         videoSurface = findViewById(R.id.video_surface);
         bitmapImage = findViewById(R.id.bitmap_image);
         overlayView = findViewById(R.id.overlay_view);
+
+
+        textDistance = findViewById(R.id.text_distance);
+        textAngle = findViewById(R.id.text_angle);
+        textDirection = findViewById(R.id.text_direction);
+
 
         buttonForward = findViewById(R.id.button_forward);
         buttonEnableVirtualStick = findViewById(R.id.button_enable_virtual_stick);
@@ -174,12 +184,31 @@ public class VirtualStickView extends LinearLayout implements PresentableView, T
         // カメラ中心と物体中心の差を計算
         float deltaX = objectCenterX - cameraCenterX;
         float deltaY = objectCenterY - cameraCenterY;
-
-        Log.d(TAG, "DeltaX: " + deltaX + ", DeltaY: " + deltaY);
-
         // 差に基づいてジンバルを調整
         adjustGimbalPitchAndYaw(deltaX, deltaY);
+
+        // UIに情報を表示
+        updateUI(deltaX, deltaY);
     }
+
+    private void updateUI(float deltaX, float deltaY) {
+        // 適当な距離を設定（例として固定値を使用）
+        float distance = 10.0f; // メートル
+
+        // ピッチとヨーの角度を計算
+        float pitchAngle = deltaY / videoSurface.getHeight() * 100; // 仮の計算
+        float yawAngle = deltaX / videoSurface.getWidth() * 100;   // 仮の計算
+
+        // 方向の計算（例として単純化）
+        double direction = (float) Math.atan2(deltaY, deltaX) * (180 / Math.PI); // ラジアンから度に変換
+
+        // UIに表示
+        textDistance.setText(String.format("Distance: %.1fm", distance));
+        textAngle.setText(String.format("Pitch Angle: %.1f°, Yaw Angle: %.1f°", pitchAngle, yawAngle));
+        textDirection.setText(String.format("Direction: %.1f°", direction));
+    }
+
+
 
     private void adjustGimbalPitchAndYaw(float deltaX, float deltaY) {
         // Check if the gimbal is initialized
@@ -275,9 +304,25 @@ public class VirtualStickView extends LinearLayout implements PresentableView, T
                 flightController = ((Aircraft) DJISDKManager.getInstance().getProduct()).getFlightController();
                 if (flightController != null) {
                     Log.d(TAG, "FlightController initialized successfully.");
+
+                    // 高度のリスナーを追加する
+                    flightController.setStateCallback(flightControllerState -> {
+                        // 高度を取得する
+                        float altitude = flightControllerState.getAircraftLocation().getAltitude();  // getAltitude()メソッドに置き換え
+                        updateDistanceUI(altitude);
+                    });
+                } else {
+                    Log.e(TAG, "FlightController is null.");
                 }
             }
+        } else {
+            Log.e(TAG, "Product is null or not an Aircraft.");
         }
+    }
+
+    private void updateDistanceUI(float altitude) {
+        // 仮定として物体が地面にある場合の距離をそのまま高度として表示
+        textDistance.setText(String.format("Distance: %.1fm", altitude));
     }
 
     private void toggleVirtualStickMode() {

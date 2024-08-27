@@ -77,8 +77,8 @@ public class OverlayView extends View {
                 canvas.drawCircle(centerX, centerY, 10.0f, centerPointPaint); // 中心に緑色の点を描画
 
                 // 座標テキストをバウンディングボックスの下に表示
-                String coordinatesText = String.format("Box: (%.1f, %.1f, %.1f, %.1f) Center: (%.1f, %.1f)",
-                        boundingBox.left, boundingBox.top, boundingBox.right, boundingBox.bottom, centerX, centerY);
+                String coordinatesText = String.format("Center: (%.1f, %.1f)",
+                         centerX, centerY);
                 canvas.drawText(coordinatesText, boundingBox.left, boundingBox.bottom + 40, textPaint);
             }
         }
