@@ -39,11 +39,13 @@ import dji.sdk.gimbal.Gimbal;
 import dji.sdk.products.Aircraft;
 import dji.sdk.sdkmanager.DJISDKManager;
 
-
 public class VirtualStickView extends LinearLayout implements PresentableView, TextureView.SurfaceTextureListener {
     private TextureView videoSurface;
     private ImageView bitmapImage;
     private OverlayView overlayView;
+    private TextView distanceTextView;
+    private TextView angleTextView;
+    private TextView movementTextView; // 移動量を表示するTextView
     private DJICodecManager codecManager;
     private VideoFeeder.VideoDataListener videoDataListener;
     private Button buttonForward;
@@ -51,11 +53,8 @@ public class VirtualStickView extends LinearLayout implements PresentableView, T
     private Button buttonTakeoffLand;
     private FlightController flightController;
     private Gimbal gimbal;
-    private static final int DETECTION_INTERVAL = 5; // 5フレームごとに検出処理を実行
+    private static final int DETECTION_INTERVAL = 5;
     private int frameCount = 0;
-    private TextView textDistance;
-    private TextView textAngle;
-    private TextView textDirection;
 
     private static final String TAG = "VirtualStickView";
 
@@ -74,16 +73,14 @@ public class VirtualStickView extends LinearLayout implements PresentableView, T
             Aircraft aircraft = (Aircraft) product;
             if (aircraft.getGimbal() != null) {
                 gimbal = aircraft.getGimbal();
-                Log.d(TAG, "Gimbal initialized successfully.");
+                Log.d(TAG, "ジンバルが正常に初期化されました。");
             } else {
-                Log.e(TAG, "Gimbal is not available.");
+                Log.e(TAG, "ジンバルが利用できません。");
             }
         } else {
-            Log.e(TAG, "Product is not an aircraft or is null.");
+            Log.e(TAG, "製品が航空機ではないか、nullです。");
         }
     }
-
-
 
     private void init(Context context) {
         LayoutInflater layoutInflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
@@ -92,12 +89,9 @@ public class VirtualStickView extends LinearLayout implements PresentableView, T
         videoSurface = findViewById(R.id.video_surface);
         bitmapImage = findViewById(R.id.bitmap_image);
         overlayView = findViewById(R.id.overlay_view);
-
-
-        textDistance = findViewById(R.id.text_distance);
-        textAngle = findViewById(R.id.text_angle);
-        textDirection = findViewById(R.id.text_direction);
-
+        distanceTextView = findViewById(R.id.distance_text_view);
+        angleTextView = findViewById(R.id.angle_text_view);
+        movementTextView = findViewById(R.id.movement_text_view); // 移動量表示用のTextViewを初期化
 
         buttonForward = findViewById(R.id.button_forward);
         buttonEnableVirtualStick = findViewById(R.id.button_enable_virtual_stick);
@@ -124,7 +118,7 @@ public class VirtualStickView extends LinearLayout implements PresentableView, T
                 if (codecManager != null) {
                     codecManager.sendDataToDecoder(videoBuffer, size);
                 } else {
-                    Log.e(TAG, "codecManager is null. Cannot decode video data.");
+                    Log.e(TAG, "codecManagerがnullです。ビデオデータをデコードできません。");
                 }
             } catch (Exception e) {
                 handleError(e);
@@ -135,12 +129,12 @@ public class VirtualStickView extends LinearLayout implements PresentableView, T
 
     @Override
     public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
-        Log.d(TAG, "onSurfaceTextureAvailable: Initializing DJICodecManager.");
+        Log.d(TAG, "onSurfaceTextureAvailable: DJICodecManagerを初期化しています。");
         codecManager = new DJICodecManager(getContext(), surface, width, height);
         if (codecManager == null) {
-            Log.e(TAG, "Failed to initialize DJICodecManager.");
+            Log.e(TAG, "DJICodecManagerの初期化に失敗しました。");
         } else {
-            Log.d(TAG, "DJICodecManager initialized successfully.");
+            Log.d(TAG, "DJICodecManagerが正常に初期化されました。");
         }
     }
 
@@ -157,6 +151,7 @@ public class VirtualStickView extends LinearLayout implements PresentableView, T
         }
         return false;
     }
+
     @Override
     public void onSurfaceTextureUpdated(SurfaceTexture surface) {
         frameCount++;
@@ -165,77 +160,48 @@ public class VirtualStickView extends LinearLayout implements PresentableView, T
             if (bitmap != null) {
                 objectDetectorHelper.detect(bitmap, this::onDetectionResults);
             } else {
-                Log.e(TAG, "getBitmap returned null in onSurfaceTextureUpdated.");
+                Log.e(TAG, "onSurfaceTextureUpdatedでgetBitmapがnullを返しました。");
             }
         }
     }
+
     private void adjustGimbalToCenterObject(Detection detection) {
-        // カメラビューの中心座標を計算
         int cameraCenterX = videoSurface.getWidth() / 2;
         int cameraCenterY = videoSurface.getHeight() / 2;
 
-        // 検出された物体のバウンディングボックスを取得
         RectF boundingBox = detection.getBoundingBox();
-
-        // 検出された物体の中心座標を計算
         float objectCenterX = boundingBox.centerX();
         float objectCenterY = boundingBox.centerY();
 
-        // カメラ中心と物体中心の差を計算
         float deltaX = objectCenterX - cameraCenterX;
         float deltaY = objectCenterY - cameraCenterY;
+
+        Log.d(TAG, "DeltaX: " + deltaX + ", DeltaY: " + deltaY);
+
         // 差に基づいてジンバルを調整
         adjustGimbalPitchAndYaw(deltaX, deltaY);
-
-        // UIに情報を表示
-        updateUI(deltaX, deltaY);
     }
-
-    private void updateUI(float deltaX, float deltaY) {
-        // 適当な距離を設定（例として固定値を使用）
-        float distance = 10.0f; // メートル
-
-        // ピッチとヨーの角度を計算
-        float pitchAngle = deltaY / videoSurface.getHeight() * 100; // 仮の計算
-        float yawAngle = deltaX / videoSurface.getWidth() * 100;   // 仮の計算
-
-        // 方向の計算（例として単純化）
-        double direction = (float) Math.atan2(deltaY, deltaX) * (180 / Math.PI); // ラジアンから度に変換
-
-        // UIに表示
-        textDistance.setText(String.format("Distance: %.1fm", distance));
-        textAngle.setText(String.format("Pitch Angle: %.1f°, Yaw Angle: %.1f°", pitchAngle, yawAngle));
-        textDirection.setText(String.format("Direction: %.1f°", direction));
-    }
-
-
 
     private void adjustGimbalPitchAndYaw(float deltaX, float deltaY) {
-        // Check if the gimbal is initialized
         if (gimbal == null) {
-            Log.e(TAG, "Gimbal is not initialized.");
+            Log.e(TAG, "ジンバルが初期化されていません。");
             return;
         }
 
-        // Set a threshold to prevent jitter from small offsets
-        float threshold = 20.0f; // In pixels
+        float threshold = 20.0f;
 
         if (Math.abs(deltaX) > threshold || Math.abs(deltaY) > threshold) {
-            float yawAdjustment = 0.0f;   // Adjustment for left/right direction
-            float pitchAdjustment = 0.0f; // Adjustment for up/down direction
+            float yawAdjustment = 0.0f;
+            float pitchAdjustment = 0.0f;
 
-            // Adjust gimbal yaw (left/right) based on deltaX
             if (Math.abs(deltaX) > threshold) {
-                yawAdjustment = deltaX > 0 ? 10.0f : -10.0f; // Right is positive, left is negative
+                yawAdjustment = deltaX > 0 ? 10.0f : -10.0f;
             }
 
-            // Adjust gimbal pitch (up/down) based on deltaY
             if (Math.abs(deltaY) > threshold) {
-                // Invert pitch adjustment: If deltaY > 0, move up (negative pitch)
-                pitchAdjustment = deltaY > 0 ? -10.0f : 10.0f; // Up is negative, down is positive
+                pitchAdjustment = deltaY > 0 ? -10.0f : 10.0f;
             }
 
-            // Send command to adjust the drone's gimbal
             Rotation.Builder rotationBuilder = new Rotation.Builder()
                     .mode(RotationMode.SPEED)
                     .pitch(pitchAdjustment)
@@ -244,19 +210,16 @@ public class VirtualStickView extends LinearLayout implements PresentableView, T
 
             gimbal.rotate(rotationBuilder.build(), djiError -> {
                 if (djiError != null) {
-                    Log.e(TAG, "Gimbal adjustment error: " + djiError.getDescription());
+                    Log.e(TAG, "ジンバル調整エラー: " + djiError.getDescription());
                 } else {
-                    Log.d(TAG, "Gimbal adjusted successfully to center the object.");
+                    Log.d(TAG, "物体を中心にするためにジンバルが正常に調整されました。");
                 }
             });
         }
     }
 
-
-
     private void onDetectionResults(List<Detection> results) {
         if (results != null) {
-            // "person"というラベルの検出をフィルタリング
             List<Detection> personDetections = new ArrayList<>();
             for (Detection detection : results) {
                 String label = detection.getCategories().get(0).getLabel();
@@ -266,26 +229,190 @@ public class VirtualStickView extends LinearLayout implements PresentableView, T
             }
 
             if (!personDetections.isEmpty()) {
-                Log.d(TAG, "Person detection results received. Updating overlay.");
+                Log.d(TAG, "人が検出されました。オーバーレイを更新します。");
                 overlayView.setResults(personDetections);
 
-                // 最初の検出結果（例として）を取得してジンバルを調整
                 Detection firstPerson = personDetections.get(0);
                 adjustGimbalToCenterObject(firstPerson);
+
+                // 距離と角度の計算
+                float distance = calculateDistanceToBoundingBox(firstPerson.getBoundingBox());
+                float[] angles = calculateAngleToBoundingBox(firstPerson.getBoundingBox());
+
+                // 移動量と方向の計算
+                String[] movementDirections = calculateMovementDirections(angles, distance);
+                float[] movements = calculateMovement(angles, distance);
+
+                // 距離、角度、移動方向と量を表示
+                displayDistance(distance);
+                displayAngle(angles);
+                displayMovement(movementDirections, movements);
+
+                // ドローンの動きを調整
+                adjustDroneMovement(angles, distance);
             } else {
-                Log.d(TAG, "No person detected.");
+                Log.d(TAG, "人が検出されませんでした。");
+                displayDistance(-1);
+                displayAngle(new float[]{Float.NaN, Float.NaN});
+                displayMovement(new String[]{"", ""}, new float[]{0.0f, 0.0f});
             }
         } else {
-            Log.e(TAG, "onDetectionResults: Received null detection results.");
+            Log.e(TAG, "onDetectionResults: 検出結果がnullでした。");
+            displayDistance(-1);
+            displayAngle(new float[]{Float.NaN, Float.NaN});
+            displayMovement(new String[]{"", ""}, new float[]{0.0f, 0.0f});
         }
     }
 
+    private float calculateDistanceToBoundingBox(RectF boundingBox) {
+        float focalLength = 0.004f;
+        float sensorWidth = 0.00617f;
+        float realObjectWidth = 0.5f;
+
+        float boundingBoxWidthPx = boundingBox.width();
+        int imageWidthPx = videoSurface.getWidth();
+
+        float sensorWidthInMeters = boundingBoxWidthPx / imageWidthPx * sensorWidth;
+
+        return (focalLength * realObjectWidth) / sensorWidthInMeters;
+    }
+
+    private float[] calculateAngleToBoundingBox(RectF boundingBox) {
+        int imageCenterX = videoSurface.getWidth() / 2;
+        int imageCenterY = videoSurface.getHeight() / 2;
+
+        float boxCenterX = boundingBox.centerX();
+        float boxCenterY = boundingBox.centerY();
+
+        float horizontalFOV = 78.8f;
+        float verticalFOV = 63.4f;
+
+        float anglePerPixelX = horizontalFOV / videoSurface.getWidth();
+        float anglePerPixelY = verticalFOV / videoSurface.getHeight();
+
+        float deltaX = boxCenterX - imageCenterX;
+        float deltaY = boxCenterY - imageCenterY;
+
+        float angleX = deltaX * anglePerPixelX;
+        float angleY = deltaY * anglePerPixelY;
+
+        return new float[]{angleX, angleY};
+    }
+
+    private String[] calculateMovementDirections(float[] angles, float distance) {
+        if (Float.isNaN(angles[0]) || Float.isNaN(angles[1]) || distance < 0) {
+            return new String[]{"", ""};
+        }
+
+        String horizontalDirection = angles[0] > 0 ? "右" : "左";
+        String verticalDirection = angles[1] > 0 ? "下" : "上";
+
+        return new String[]{horizontalDirection, verticalDirection};
+    }
+
+    private float[] calculateMovement(float[] angles, float distance) {
+        if (Float.isNaN(angles[0]) || Float.isNaN(angles[1]) || distance < 0) {
+            return new float[]{0.0f, 0.0f};
+        }
+
+        float horizontalMovement = (float) (distance * Math.tan(Math.toRadians(angles[0])));
+        float verticalMovement = (float) (distance * Math.tan(Math.toRadians(angles[1])));
+
+        return new float[]{horizontalMovement, verticalMovement};
+    }
+
+    private void adjustDroneMovement(float[] angles, float distance) {
+        float yawAdjustment = calculateYawAdjustment(angles[0]);
+        float rollAdjustment = calculateRollAdjustment(angles[0], distance);
+        float pitchAdjustment = calculatePitchAdjustment(angles[1], distance);
+        float throttleAdjustment = calculateThrottleAdjustment(angles[1]);
+
+        if (yawAdjustment != 0.0f) {
+            Rotation.Builder rotationBuilder = new Rotation.Builder()
+                    .mode(RotationMode.SPEED)
+                    .yaw(yawAdjustment)
+                    .pitch(0)
+                    .roll(0);
+            gimbal.rotate(rotationBuilder.build(), djiError -> {
+                if (djiError != null) {
+                    Log.e(TAG, "Yaw調整エラー: " + djiError.getDescription());
+                } else {
+                    Log.d(TAG, "Yawが正常に調整されました。");
+                }
+            });
+        }
+
+        if (flightController != null) {
+            flightController.sendVirtualStickFlightControlData(
+                    new FlightControlData(pitchAdjustment, rollAdjustment, yawAdjustment, throttleAdjustment), djiError -> {
+                        if (djiError != null) {
+                            Log.e(TAG, "フライトコントロールデータエラー: " + djiError.getDescription());
+                        } else {
+                            Log.d(TAG, "ドローンの動きが正常に調整されました。");
+                        }
+                    });
+        }
+    }
+
+    private float calculateYawAdjustment(float angleX) {
+        float yawThreshold = 1.0f;
+
+        if (Math.abs(angleX) > yawThreshold) {
+            return angleX;
+        } else {
+            return 0.0f;
+        }
+    }
+
+    private float calculateRollAdjustment(float angleX, float distance) {
+        return (float) (distance * Math.tan(Math.toRadians(angleX)));
+    }
+
+    private float calculatePitchAdjustment(float angleY, float distance) {
+        return (float) (distance * Math.tan(Math.toRadians(angleY)));
+    }
+
+    private float calculateThrottleAdjustment(float angleY) {
+        float throttleThreshold = 1.0f;
+
+        if (Math.abs(angleY) > throttleThreshold) {
+            return -angleY;
+        } else {
+            return 0.0f;
+        }
+    }
+
+    private void displayDistance(float distance) {
+        if (distance >= 0) {
+            distanceTextView.setText(String.format("距離: %.2f m", distance));
+        } else {
+            distanceTextView.setText("距離: N/A");
+        }
+    }
+
+    private void displayAngle(float[] angles) {
+        if (!Float.isNaN(angles[0]) && !Float.isNaN(angles[1])) {
+            angleTextView.setText(String.format("角度 X: %.2f°, 角度 Y: %.2f°", angles[0], angles[1]));
+        } else {
+            angleTextView.setText("角度: N/A");
+        }
+    }
+
+    private void displayMovement(String[] movements, float[] distances) {
+        if (movements != null && distances != null) {
+            movementTextView.setText(String.format("%sに %.2f m, %sに %.2f m 移動",
+                    movements[0], distances[0],
+                    movements[1], distances[1]));
+        } else {
+            movementTextView.setText("移動: N/A");
+        }
+    }
 
     private void handleError(Exception e) {
-        Log.e(TAG, "handleError: " + e.getMessage(), e);
+        Log.e(TAG, "エラーが発生しました: " + e.getMessage(), e);
         new Handler(Looper.getMainLooper()).post(() -> {
             AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
-            builder.setTitle("Error")
+            builder.setTitle("エラー")
                     .setMessage(e.getMessage())
                     .setPositiveButton("OK", (dialog, which) -> {
                         Context context = getContext();
@@ -303,37 +430,21 @@ public class VirtualStickView extends LinearLayout implements PresentableView, T
             if (DJISDKManager.getInstance().getProduct() instanceof Aircraft) {
                 flightController = ((Aircraft) DJISDKManager.getInstance().getProduct()).getFlightController();
                 if (flightController != null) {
-                    Log.d(TAG, "FlightController initialized successfully.");
-
-                    // 高度のリスナーを追加する
-                    flightController.setStateCallback(flightControllerState -> {
-                        // 高度を取得する
-                        float altitude = flightControllerState.getAircraftLocation().getAltitude();  // getAltitude()メソッドに置き換え
-                        updateDistanceUI(altitude);
-                    });
-                } else {
-                    Log.e(TAG, "FlightController is null.");
+                    Log.d(TAG, "フライトコントローラーが正常に初期化されました。");
                 }
             }
-        } else {
-            Log.e(TAG, "Product is null or not an Aircraft.");
         }
-    }
-
-    private void updateDistanceUI(float altitude) {
-        // 仮定として物体が地面にある場合の距離をそのまま高度として表示
-        textDistance.setText(String.format("Distance: %.1fm", altitude));
     }
 
     private void toggleVirtualStickMode() {
         if (flightController != null) {
             flightController.setVirtualStickModeEnabled(!isVirtualStickEnabled, djiError -> {
                 if (djiError != null) {
-                    Log.e(TAG, "Error toggling virtual stick mode: " + djiError.getDescription());
+                    Log.e(TAG, "バーチャルスティックモードの切り替えエラー: " + djiError.getDescription());
                 } else {
                     isVirtualStickEnabled = !isVirtualStickEnabled;
-                    Log.d(TAG, "Virtual stick mode " + (isVirtualStickEnabled ? "enabled" : "disabled") + " successfully.");
-                    Toast.makeText(getContext(), "Virtual Stick Mode " + (isVirtualStickEnabled ? "Enabled" : "Disabled"), Toast.LENGTH_SHORT).show();
+                    Log.d(TAG, "バーチャルスティックモードが " + (isVirtualStickEnabled ? "有効" : "無効") + " になりました。");
+                    Toast.makeText(getContext(), "バーチャルスティックモードが " + (isVirtualStickEnabled ? "有効" : "無効") + " になりました", Toast.LENGTH_SHORT).show();
                 }
             });
         }
@@ -343,25 +454,25 @@ public class VirtualStickView extends LinearLayout implements PresentableView, T
         if (flightController != null) {
             flightController.startTakeoff(djiError -> {
                 if (djiError != null) {
-                    Log.e(TAG, "Error starting takeoff: " + djiError.getDescription());
+                    Log.e(TAG, "離陸開始エラー: " + djiError.getDescription());
                 } else {
-                    Log.d(TAG, "Takeoff started successfully.");
-                    Toast.makeText(getContext(), "Takeoff started", Toast.LENGTH_SHORT).show();
+                    Log.d(TAG, "離陸が正常に開始されました。");
+                    Toast.makeText(getContext(), "離陸が開始されました", Toast.LENGTH_SHORT).show();
                 }
             });
         } else {
-            Log.e(TAG, "FlightController is null. Cannot start takeoff.");
+            Log.e(TAG, "フライトコントローラーがnullです。離陸を開始できません。");
         }
     }
 
     private void moveDroneForward() {
         if (!isVirtualStickEnabled) {
-            Log.e(TAG, "Virtual Stick Mode is not enabled. Cannot move drone forward.");
-            Toast.makeText(getContext(), "Enable Virtual Stick Mode first", Toast.LENGTH_SHORT).show();
+            Log.e(TAG, "バーチャルスティックモードが有効ではありません。ドローンを前進させることができません。");
+            Toast.makeText(getContext(), "まずバーチャルスティックモードを有効にしてください", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        float pitch = 15.0f; // 前進するためのピッチ
+        float pitch = 15.0f;
         float roll = 0.0f;
         float yaw = 0.0f;
         float throttle = 0.0f;
@@ -371,11 +482,11 @@ public class VirtualStickView extends LinearLayout implements PresentableView, T
                 flightController.sendVirtualStickFlightControlData(
                         new FlightControlData(pitch, roll, yaw, throttle), djiError -> {
                             if (djiError != null) {
-                                Log.e(TAG, "Error sending virtual stick data: " + djiError.getDescription());
+                                Log.e(TAG, "仮想スティックデータ送信エラー: " + djiError.getDescription());
                             } else {
-                                Log.d(TAG, "Drone moving forward successfully.");
+                                Log.d(TAG, "ドローンが前進しています。");
                                 new Handler(Looper.getMainLooper()).post(() ->
-                                        Toast.makeText(getContext(), "Drone is moving forward", Toast.LENGTH_SHORT).show());
+                                        Toast.makeText(getContext(), "ドローンが前進しています", Toast.LENGTH_SHORT).show());
                             }
                         });
             }
@@ -386,11 +497,11 @@ public class VirtualStickView extends LinearLayout implements PresentableView, T
                 flightController.sendVirtualStickFlightControlData(
                         new FlightControlData(0, roll, yaw, throttle), djiError -> {
                             if (djiError != null) {
-                                Log.e(TAG, "Error stopping drone: " + djiError.getDescription());
+                                Log.e(TAG, "ドローン停止エラー: " + djiError.getDescription());
                             } else {
-                                Log.d(TAG, "Drone stopped successfully.");
+                                Log.d(TAG, "ドローンが正常に停止しました。");
                                 new Handler(Looper.getMainLooper()).post(() ->
-                                        Toast.makeText(getContext(), "Drone has stopped", Toast.LENGTH_SHORT).show());
+                                        Toast.makeText(getContext(), "ドローンが停止しました", Toast.LENGTH_SHORT).show());
                             }
                         });
             }
@@ -407,9 +518,6 @@ public class VirtualStickView extends LinearLayout implements PresentableView, T
     @NonNull
     @Override
     public String getHint() {
-        return "VirtualStickView";
+        return "バーチャルスティックビュー";
     }
-
 }
-
-
