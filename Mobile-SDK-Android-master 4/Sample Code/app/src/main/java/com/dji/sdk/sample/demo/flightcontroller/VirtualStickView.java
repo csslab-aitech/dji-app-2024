@@ -165,23 +165,6 @@ public class VirtualStickView extends LinearLayout implements PresentableView, T
         }
     }
 
-    private void adjustGimbalToCenterObject(Detection detection) {
-        int cameraCenterX = videoSurface.getWidth() / 2;
-        int cameraCenterY = videoSurface.getHeight() / 2;
-
-        RectF boundingBox = detection.getBoundingBox();
-        float objectCenterX = boundingBox.centerX();
-        float objectCenterY = boundingBox.centerY();
-
-        float deltaX = objectCenterX - cameraCenterX;
-        float deltaY = objectCenterY - cameraCenterY;
-
-        Log.d(TAG, "DeltaX: " + deltaX + ", DeltaY: " + deltaY);
-
-        // 差に基づいてジンバルを調整
-        adjustGimbalPitchAndYaw(deltaX, deltaY);
-    }
-
     private void adjustGimbalPitchAndYaw(float deltaX, float deltaY) {
         if (gimbal == null) {
             Log.e(TAG, "ジンバルが初期化されていません。");
@@ -217,6 +200,42 @@ public class VirtualStickView extends LinearLayout implements PresentableView, T
             });
         }
     }
+
+
+    private void adjustGimbalToCenterObject(Detection detection) {
+        int cameraCenterX = videoSurface.getWidth() / 2;
+        int cameraCenterY = videoSurface.getHeight() / 2;
+
+        RectF boundingBox = detection.getBoundingBox();
+        float objectCenterX = boundingBox.centerX();
+        float objectCenterY = boundingBox.centerY();
+
+        float deltaX = objectCenterX - cameraCenterX;
+        float deltaY = objectCenterY - cameraCenterY;
+
+        Log.d(TAG, "DeltaX: " + deltaX + ", DeltaY: " + deltaY);
+
+        // 差に基づいてジンバルを調整
+        adjustGimbalPitchAndYaw(deltaX, deltaY);
+
+        // ジンバルの向きに合わせて機体を回転させる
+        float yawAdjustment = calculateYawAdjustment(deltaX);
+        rotateAircraft(yawAdjustment);
+    }
+
+    private void rotateAircraft(float yawAdjustment) {
+        if (flightController != null) {
+            FlightControlData flightControlData = new FlightControlData(0, 0, yawAdjustment, 0);
+            flightController.sendVirtualStickFlightControlData(flightControlData, djiError -> {
+                if (djiError != null) {
+                    Log.e(TAG, "機体回転エラー: " + djiError.getDescription());
+                } else {
+                    Log.d(TAG, "機体が正常に回転しました。");
+                }
+            });
+        }
+    }
+
 
     private void onDetectionResults(List<Detection> results) {
         if (results != null) {
@@ -353,7 +372,6 @@ public class VirtualStickView extends LinearLayout implements PresentableView, T
                     });
         }
     }
-
     private float calculateYawAdjustment(float angleX) {
         float yawThreshold = 1.0f;
 
