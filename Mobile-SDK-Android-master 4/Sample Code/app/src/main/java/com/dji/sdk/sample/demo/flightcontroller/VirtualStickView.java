@@ -539,3 +539,4 @@ public class VirtualStickView extends LinearLayout implements PresentableView, T
         return "バーチャルスティックビュー";
     }
 }
+//
