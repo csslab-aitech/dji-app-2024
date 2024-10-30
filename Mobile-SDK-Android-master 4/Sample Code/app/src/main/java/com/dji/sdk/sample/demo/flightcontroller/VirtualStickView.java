@@ -165,6 +165,40 @@ public class VirtualStickView extends LinearLayout implements PresentableView, T
         }
     }
 
+    private void adjustGimbalToCenterObject(Detection detection) {
+        int cameraCenterX = videoSurface.getWidth() / 2;
+        int cameraCenterY = videoSurface.getHeight() / 2;
+
+        RectF boundingBox = detection.getBoundingBox();
+        float objectCenterX = boundingBox.centerX();
+        float objectCenterY = boundingBox.centerY();
+
+        float deltaX = objectCenterX - cameraCenterX;
+        float deltaY = objectCenterY - cameraCenterY;
+
+        Log.d(TAG, "DeltaX: " + deltaX + ", DeltaY: " + deltaY);
+
+        // 差に基づいてジンバルを調整
+        adjustGimbalPitchAndYaw(deltaX, deltaY);
+    }
+    private void adjustDroneYaw(float yawAdjustment) {
+        if (flightController != null) {
+            // 現在の仮想スティックのデータを取得
+            FlightControlData currentControlData = new FlightControlData(0, 0, yawAdjustment, 0);
+
+            // ドローンのヨーを調整
+            flightController.sendVirtualStickFlightControlData(currentControlData, djiError -> {
+                if (djiError != null) {
+                    Log.e(TAG, "ドローンのヨー調整エラー: " + djiError.getDescription());
+                } else {
+                    Log.d(TAG, "ドローンのヨーが正常に調整されました。");
+                }
+            });
+        } else {
+            Log.e(TAG, "フライトコントローラーがnullです。");
+        }
+    }
+
     private void adjustGimbalPitchAndYaw(float deltaX, float deltaY) {
         if (gimbal == null) {
             Log.e(TAG, "ジンバルが初期化されていません。");
@@ -179,6 +213,7 @@ public class VirtualStickView extends LinearLayout implements PresentableView, T
 
             if (Math.abs(deltaX) > threshold) {
                 yawAdjustment = deltaX > 0 ? 10.0f : -10.0f;
+                adjustDroneYaw(yawAdjustment); // ドローンのヨーも調整
             }
 
             if (Math.abs(deltaY) > threshold) {
@@ -196,41 +231,6 @@ public class VirtualStickView extends LinearLayout implements PresentableView, T
                     Log.e(TAG, "ジンバル調整エラー: " + djiError.getDescription());
                 } else {
                     Log.d(TAG, "物体を中心にするためにジンバルが正常に調整されました。");
-                }
-            });
-        }
-    }
-
-
-    private void adjustGimbalToCenterObject(Detection detection) {
-        int cameraCenterX = videoSurface.getWidth() / 2;
-        int cameraCenterY = videoSurface.getHeight() / 2;
-
-        RectF boundingBox = detection.getBoundingBox();
-        float objectCenterX = boundingBox.centerX();
-        float objectCenterY = boundingBox.centerY();
-
-        float deltaX = objectCenterX - cameraCenterX;
-        float deltaY = objectCenterY - cameraCenterY;
-
-        Log.d(TAG, "DeltaX: " + deltaX + ", DeltaY: " + deltaY);
-
-        // 差に基づいてジンバルを調整
-        adjustGimbalPitchAndYaw(deltaX, deltaY);
-
-        // ジンバルの向きに合わせて機体を回転させる
-        float yawAdjustment = calculateYawAdjustment(deltaX);
-        rotateAircraft(yawAdjustment);
-    }
-
-    private void rotateAircraft(float yawAdjustment) {
-        if (flightController != null) {
-            FlightControlData flightControlData = new FlightControlData(0, 0, yawAdjustment, 0);
-            flightController.sendVirtualStickFlightControlData(flightControlData, djiError -> {
-                if (djiError != null) {
-                    Log.e(TAG, "機体回転エラー: " + djiError.getDescription());
-                } else {
-                    Log.d(TAG, "機体が正常に回転しました。");
                 }
             });
         }
@@ -539,4 +539,3 @@ public class VirtualStickView extends LinearLayout implements PresentableView, T
         return "バーチャルスティックビュー";
     }
 }
-//
