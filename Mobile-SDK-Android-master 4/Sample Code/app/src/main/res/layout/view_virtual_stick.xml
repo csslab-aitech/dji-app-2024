@@ -1,17 +1,98 @@
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical">
+    android:layout_height="match_parent">
 
-    <SurfaceView
+    <!-- カメラ映像とオーバーレイ -->
+    <TextureView
         android:id="@+id/video_surface"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1" />
+        android:layout_width="400dp"
+        android:layout_height="400dp"
+        android:layout_gravity="center" />
+
+    <com.dji.sdk.sample.demo.flightcontroller.OverlayView
+        android:id="@+id/overlay_view"
+        android:layout_width="400dp"
+        android:layout_height="400dp"
+        android:layout_gravity="center" />
 
     <ImageView
         android:id="@+id/bitmap_image"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1" />
-</LinearLayout>
+        android:layout_width="400dp"
+        android:layout_height="400dp"
+        android:visibility="gone"
+        android:layout_gravity="center" />
+
+    <!-- 距離、角度、移動量の表示 -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_gravity="top|center_horizontal"
+        android:padding="16dp">
+
+        <!-- 距離表示用のテキストビュー -->
+        <TextView
+            android:id="@+id/distance_text_view"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Distance: "
+            android:textSize="18sp"
+            android:textColor="#FFFFFF"
+            android:background="#88000000"
+            android:layout_marginBottom="8dp"/>
+
+        <!-- 角度表示用のテキストビュー -->
+        <TextView
+            android:id="@+id/angle_text_view"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Angle: "
+            android:textSize="18sp"
+            android:textColor="#FFFFFF"
+            android:background="#88000000"
+            android:layout_marginBottom="8dp"/>
+
+        <!-- 移動量表示用のテキストビュー -->
+        <TextView
+            android:id="@+id/movement_text_view"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Movement: "
+            android:textSize="18sp"
+            android:textColor="#FFFFFF"
+            android:background="#88000000"/>
+    </LinearLayout>
+
+    <!-- 操作ボタン -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:orientation="vertical"
+        android:layout_marginBottom="16dp">
+
+        <!-- Forwardボタン -->
+        <Button
+            android:id="@+id/button_forward"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Forward"
+            android:layout_marginBottom="10dp"/>
+
+        <!-- Virtual Stick有効化ボタン -->
+        <Button
+            android:id="@+id/button_enable_virtual_stick"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Enable Virtual Stick"
+            android:layout_marginBottom="10dp"/>
+
+        <!-- Takeoff/Landボタン -->
+        <Button
+            android:id="@+id/button_takeoff_land"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Takeoff/Land"/>
+    </LinearLayout>
+</FrameLayout>
